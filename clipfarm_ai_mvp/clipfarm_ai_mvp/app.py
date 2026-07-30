@@ -68,3 +68,24 @@ if video:
                 ):
 
                     st.write(segment["text"])
+
+        if resultado.best_clips:
+
+            st.subheader("Melhores Clips")
+
+            for clip in resultado.best_clips[:5]:
+
+                with st.expander(
+                    f"⭐ {clip['score']} pontos | "
+                    f"{clip['start']:.1f}s → {clip['end']:.1f}s"
+                ):
+
+                    st.write("### Motivos")
+
+                    for reason in clip["reasons"]:
+
+                        st.write(f"• {reason}")
+
+                    st.write("")
+
+                    st.write(clip["text"])
