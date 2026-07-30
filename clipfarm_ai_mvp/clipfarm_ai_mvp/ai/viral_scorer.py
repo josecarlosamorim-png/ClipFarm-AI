@@ -6,6 +6,8 @@ from ai.openai_client import OpenAIClient
 
 class ViralScorer:
 
+    TOP_CLIPS = 10
+
     def __init__(self):
 
         self.rules = ScoringRules()
@@ -13,23 +15,36 @@ class ViralScorer:
 
     def score(self, job: ProcessingJob):
 
-        clips = []
+        scored_clips = []
 
         for segment in job.segments:
 
-            # Pontuação heurística
+            # -----------------------------
+            # Score heurístico
+            # -----------------------------
+
             heuristic_score, reasons = self.rules.score(segment)
 
-            # Análise do LLM (atualmente simulada)
+            # -----------------------------
+            # Score LLM
+            # -----------------------------
+
             llm_result = self.llm.analyze_segment(segment)
 
-            # Combinação das pontuações
+            llm_score = llm_result.get("score", 0)
+
+            # Enquanto o LLM é simulado damos mais peso
+            # ao algoritmo heurístico.
+
             final_score = int(
-                heuristic_score * 0.4 +
-                llm_result["score"] * 0.6
+
+                heuristic_score * 0.80 +
+
+                llm_score * 0.20
+
             )
 
-            clips.append({
+            clip = {
 
                 **segment,
 
@@ -37,23 +52,110 @@ class ViralScorer:
 
                 "heuristic_score": heuristic_score,
 
-                "llm_score": llm_result["score"],
+                "llm_score": llm_score,
 
-                "title": llm_result["title"],
+                "title": llm_result.get(
 
-                "category": llm_result["category"],
+                    "title",
 
-                "confidence": llm_result["confidence"],
+                    "Untitled"
 
-                "reason": llm_result["reason"],
+                ),
 
-                "reasons": reasons
+                "category": llm_result.get(
 
-            })
+                    "category",
 
-        clips.sort(
-            key=lambda clip: clip["score"],
+                    "General"
+
+                ),
+
+                "confidence": llm_result.get(
+
+                    "confidence",
+
+                    0
+
+                ),
+
+                "reason": llm_result.get(
+
+                    "reason",
+
+                    ""
+
+                ),
+
+                "heuristic_reasons": reasons
+
+            }
+
+            scored_clips.append(clip)
+
+        # ------------------------------------
+        # Ordenação
+        # ------------------------------------
+
+        scored_clips.sort(
+
+            key=lambda clip: (
+
+                clip["score"],
+
+                clip["confidence"],
+
+                clip["duration"]
+
+            ),
+
             reverse=True
+
         )
 
-        job.best_clips = clips
+        # ------------------------------------
+        # Remover clips quase iguais
+        # ------------------------------------
+
+        filtered = []
+
+        for clip in scored_clips:
+
+            duplicated = False
+
+            for chosen in filtered:
+
+                overlap = min(
+
+                    clip["end"],
+
+                    chosen["end"]
+
+                ) - max(
+
+                    clip["start"],
+
+                    chosen["start"]
+
+                )
+
+                if overlap <= 0:
+                    continue
+
+                shortest = min(
+
+                    clip["duration"],
+
+                    chosen["duration"]
+
+                )
+
+                if overlap / shortest > 0.70:
+
+                    duplicated = True
+                    break
+
+            if not duplicated:
+
+                filtered.append(clip)
+
+        job.best_clips = filtered[:self.TOP_CLIPS]
