@@ -51,8 +51,20 @@ if video:
 
             st.subheader("Primeiras frases")
 
-            for segment in resultado.transcript[:10]:
+            for sentence in resultado.transcript[:10]:
 
                 st.write(
-                    f"[{segment['start']:.2f}s] {segment['text']}"
+                    f"[{sentence['start']:.2f}s] {sentence['text']}"
                 )
+
+        if resultado.segments:
+
+            st.subheader("Segmentos")
+
+            for i, segment in enumerate(resultado.segments, start=1):
+
+                with st.expander(
+                    f"Segmento {i} ({segment['start']:.2f}s → {segment['end']:.2f}s)"
+                ):
+
+                    st.write(segment["text"])
