@@ -1,34 +1,33 @@
-from pathlib import Path
-
+from core.job import ProcessingJob
 import cv2
 
 
 class VideoLoader:
 
-    def load(self, video_path: Path):
+    def load(self, job: ProcessingJob):
 
-        capture = cv2.VideoCapture(str(video_path))
+        capture = cv2.VideoCapture(str(job.video_path))
 
         if not capture.isOpened():
             raise RuntimeError("Não foi possível abrir o vídeo.")
 
-        fps = capture.get(cv2.CAP_PROP_FPS)
+        job.fps = capture.get(cv2.CAP_PROP_FPS)
 
-        frames = capture.get(cv2.CAP_PROP_FRAME_COUNT)
+        job.total_frames = int(
+            capture.get(cv2.CAP_PROP_FRAME_COUNT)
+        )
 
-        width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        job.width = int(
+            capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+        )
 
-        height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        job.height = int(
+            capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        )
 
-        duration = frames / fps if fps else 0
+        if job.fps > 0:
+            job.duration = (
+                job.total_frames / job.fps
+            )
 
         capture.release()
-
-        return {
-            "path": str(video_path),
-            "fps": round(fps, 2),
-            "frames": int(frames),
-            "duration": round(duration, 2),
-            "width": width,
-            "height": height,
-        }
