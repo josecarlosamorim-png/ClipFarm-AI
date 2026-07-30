@@ -4,26 +4,17 @@ from core.job import ProcessingJob
 
 
 class WhisperEngine:
-    """
-    Responsável pela transcrição do áudio.
-
-    Gera uma lista de segmentos contendo:
-        - start
-        - end
-        - duration
-        - text
-        - words (quando disponíveis)
-
-    Estes segmentos serão usados posteriormente pelo
-    SegmentExtractor para criar candidatos a clips.
-    """
 
     def __init__(self):
 
         self.model = WhisperModel(
+
             "small",
+
             device="cpu",
+
             compute_type="int8"
+
         )
 
     def transcribe(self, job: ProcessingJob):
@@ -34,20 +25,12 @@ class WhisperEngine:
 
             beam_size=5,
 
-            best_of=5,
-
-            temperature=0.0,
-
             vad_filter=True,
-
-            vad_parameters={
-                "min_silence_duration_ms": 500,
-                "speech_pad_ms": 200
-            },
 
             word_timestamps=True,
 
             condition_on_previous_text=False
+
         )
 
         transcript = []
@@ -56,33 +39,27 @@ class WhisperEngine:
 
             words = []
 
-            if getattr(segment, "words", None):
+            if segment.words:
 
-                for word in segment.words:
+                for w in segment.words:
 
                     words.append({
 
-                        "start": word.start,
+                        "word": w.word.strip(),
 
-                        "end": word.end,
+                        "start": float(w.start),
 
-                        "word": word.word.strip(),
-
-                        "probability": getattr(
-                            word,
-                            "probability",
-                            1.0
-                        )
+                        "end": float(w.end)
 
                     })
 
             transcript.append({
 
-                "start": segment.start,
+                "start": float(segment.start),
 
-                "end": segment.end,
+                "end": float(segment.end),
 
-                "duration": segment.end - segment.start,
+                "duration": float(segment.end-segment.start),
 
                 "text": segment.text.strip(),
 
@@ -94,10 +71,4 @@ class WhisperEngine:
 
         job.metadata["language"] = info.language
 
-        job.metadata["language_probability"] = getattr(
-            info,
-            "language_probability",
-            1.0
-        )
-
-        job.metadata["transcript_segments"] = len(transcript)
+        job.metadata["language_probability"] = info.language_probability

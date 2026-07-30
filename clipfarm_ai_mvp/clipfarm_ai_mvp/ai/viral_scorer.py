@@ -2,6 +2,7 @@ from core.job import ProcessingJob
 
 from ai.scoring_rules import ScoringRules
 from ai.openai_client import OpenAIClient
+from ai.hook_detector import HookDetector
 
 
 class ViralScorer:
@@ -12,6 +13,7 @@ class ViralScorer:
 
         self.rules = ScoringRules()
         self.llm = OpenAIClient()
+        self.hook = HookDetector()
 
     def score(self, job: ProcessingJob):
 
@@ -26,6 +28,14 @@ class ViralScorer:
             heuristic_score, reasons = self.rules.score(segment)
 
             # -----------------------------
+            # Hook Score
+            # -----------------------------
+
+            hook_score = self.hook.score(
+                segment["text"][:200]
+            )
+
+            # -----------------------------
             # Score LLM
             # -----------------------------
 
@@ -33,16 +43,21 @@ class ViralScorer:
 
             llm_score = llm_result.get("score", 0)
 
-            # Enquanto o LLM é simulado damos mais peso
-            # ao algoritmo heurístico.
+            # -----------------------------
+            # Score Final
+            # -----------------------------
 
             final_score = int(
 
-                heuristic_score * 0.80 +
+                heuristic_score * 0.55 +
+
+                hook_score * 0.25 +
 
                 llm_score * 0.20
 
             )
+
+            final_score = max(0, min(100, final_score))
 
             clip = {
 
@@ -52,38 +67,28 @@ class ViralScorer:
 
                 "heuristic_score": heuristic_score,
 
+                "hook_score": hook_score,
+
                 "llm_score": llm_score,
 
                 "title": llm_result.get(
-
                     "title",
-
                     "Untitled"
-
                 ),
 
                 "category": llm_result.get(
-
                     "category",
-
                     "General"
-
                 ),
 
                 "confidence": llm_result.get(
-
                     "confidence",
-
                     0
-
                 ),
 
                 "reason": llm_result.get(
-
                     "reason",
-
                     ""
-
                 ),
 
                 "heuristic_reasons": reasons
@@ -149,7 +154,7 @@ class ViralScorer:
 
                 )
 
-                if overlap / shortest > 0.70:
+                if shortest > 0 and overlap / shortest > 0.70:
 
                     duplicated = True
                     break

@@ -2,110 +2,141 @@ from core.job import ProcessingJob
 
 
 class SegmentExtractor:
-    """
-    Cria vários segmentos candidatos a clips virais.
-
-    Estratégia:
-
-    - Junta frases consecutivas
-    - Respeita duração mínima e máxima
-    - Gera janelas deslizantes (sliding windows)
-    - Evita segmentos demasiado pequenos
-    """
 
     MIN_DURATION = 15
     MAX_DURATION = 45
 
-    WINDOW_STEP = 5
+    HOOKS = {
 
-    def extract(self, job: ProcessingJob):
+        "imagine",
+        "imagina",
+        "sabias",
+        "nunca",
+        "porque",
+        "erro",
+        "segredo",
+        "atenção",
+        "listen",
+        "wait",
+        "top",
+        "best"
+
+    }
+
+    def process(self, job: ProcessingJob):
 
         transcript = job.transcript
 
-        if not transcript:
-            job.segments = []
-            return
-
         segments = []
 
-        n = len(transcript)
+        current = []
 
-        for start_idx in range(n):
+        start = None
 
-            start = transcript[start_idx]["start"]
+        for sentence in transcript:
 
-            text = ""
-            end = start
+            if start is None:
 
-            for end_idx in range(start_idx, n):
+                start = sentence["start"]
 
-                sentence = transcript[end_idx]
+            current.append(sentence)
 
-                end = sentence["end"]
+            duration = sentence["end"] - start
 
-                duration = end - start
+            score = self._segment_score(current)
 
-                if duration > self.MAX_DURATION:
-                    break
+            should_close = False
 
-                if text:
-                    text += " "
+            if duration >= self.MAX_DURATION:
 
-                text += sentence["text"]
+                should_close = True
 
-                if duration >= self.MIN_DURATION:
+            elif duration >= self.MIN_DURATION and score >= 40:
 
-                    segments.append({
+                should_close = True
 
-                        "start": start,
+            if should_close:
 
-                        "end": end,
+                segments.append(
 
-                        "duration": duration,
+                    self._build_segment(current)
 
-                        "text": text,
+                )
 
-                        "num_sentences": end_idx - start_idx + 1
+                current = []
 
-                    })
+                start = None
 
-            # Sliding Window
-            if start_idx + self.WINDOW_STEP >= n:
-                continue
+        if current:
 
-        # Remover duplicados
+            segments.append(
 
-        unique = []
-
-        seen = set()
-
-        for segment in segments:
-
-            key = (
-
-                round(segment["start"], 1),
-
-                round(segment["end"], 1)
+                self._build_segment(current)
 
             )
 
-            if key in seen:
-                continue
+        job.segments = segments
 
-            seen.add(key)
+    # ---------------------------------------
 
-            unique.append(segment)
+    def _segment_score(self, current):
 
-        unique.sort(
+        score = 0
 
-            key=lambda s: (
+        text = " ".join(
 
-                s["start"],
+            s["text"]
 
-                s["end"]
+            for s in current
 
-            )
+        ).lower()
+
+        if any(
+
+            h in text
+
+            for h in self.HOOKS
+
+        ):
+
+            score += 20
+
+        score += text.count("?") * 5
+
+        score += text.count("!") * 3
+
+        score += min(
+
+            len(text.split()) // 10,
+
+            20
 
         )
 
-        job.segments = unique
+        return score
+
+    # ---------------------------------------
+
+    def _build_segment(self, sentences):
+
+        text = " ".join(
+
+            s["text"]
+
+            for s in sentences
+
+        )
+
+        return {
+
+            "start": sentences[0]["start"],
+
+            "end": sentences[-1]["end"],
+
+            "duration": sentences[-1]["end"] - sentences[0]["start"],
+
+            "text": text,
+
+            "sentences": sentences
+
+        }
