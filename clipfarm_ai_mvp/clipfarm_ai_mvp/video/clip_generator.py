@@ -1,138 +1,395 @@
 from pathlib import Path
 import json
-import re
-
-import ffmpeg
+import subprocess
+import shutil
 
 from core.job import ProcessingJob
 
 
 class ClipGenerator:
 
-    MAX_CLIPS = 10
+    OUTPUT_WIDTH = 1080
+    OUTPUT_HEIGHT = 1920
 
-    def __init__(self):
+    VIDEO_CODEC = "libx264"
+    AUDIO_CODEC = "aac"
 
-        self.output_dir = Path("output/clips")
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+    CRF = 18
+    PRESET = "medium"
+
+    AUDIO_BITRATE = "192k"
+
+    FPS = 30
 
     def generate(self, job: ProcessingJob):
 
-        job.generated_clips = []
+        self._check_ffmpeg()
 
-        source = str(job.video_path)
+        output_root = Path("output/clips")
+        output_root.mkdir(parents=True, exist_ok=True)
 
-        for index, clip in enumerate(job.best_clips[: self.MAX_CLIPS], start=1):
+        generated = []
 
-            safe_title = self._safe_filename(
-                clip.get("title", f"clip_{index}")
+        for index, clip in enumerate(job.best_clips, start=1):
+
+            folder = output_root / f"clip_{index:02d}"
+            folder.mkdir(parents=True, exist_ok=True)
+
+            video_file = folder / "video.mp4"
+            thumbnail_file = folder / "thumbnail.jpg"
+            metadata_file = folder / "metadata.json"
+
+            self._render_clip(
+                source_video=job.video_path,
+                output_video=video_file,
+                start=clip["start"],
+                end=clip["end"],
+                subtitles=folder / "subtitles.ass"
             )
 
-            clip_folder = self.output_dir / f"{index:02d}_{safe_title}"
-            clip_folder.mkdir(parents=True, exist_ok=True)
+            self._create_thumbnail(
+                video_file,
+                thumbnail_file
+            )
 
-            video_file = clip_folder / "video.mp4"
-            thumb_file = clip_folder / "thumbnail.jpg"
-            metadata_file = clip_folder / "metadata.json"
+            metadata = {
 
-            duration = clip["end"] - clip["start"]
+                "title": clip.get("title", ""),
 
-            try:
+                "score": clip.get("score", 0),
 
-                (
-                    ffmpeg
-                    .input(source, ss=clip["start"], t=duration)
-                    .output(
-                        str(video_file),
-                        vcodec="libx264",
-                        acodec="aac",
-                        preset="fast",
-                        movflags="+faststart"
-                    )
-                    .overwrite_output()
-                    .run(quiet=True)
+                "reason": clip.get("reason", ""),
+
+                "start": clip["start"],
+
+                "end": clip["end"]
+
+            }
+
+            with open(
+                metadata_file,
+                "w",
+                encoding="utf8"
+            ) as f:
+
+                json.dump(
+                    metadata,
+                    f,
+                    indent=4,
+                    ensure_ascii=False
                 )
 
-                (
-                    ffmpeg
-                    .input(str(video_file), ss=min(1, duration/2))
-                    .output(
-                        str(thumb_file),
-                        vframes=1
-                    )
-                    .overwrite_output()
-                    .run(quiet=True)
-                )
+            generated.append({
 
-                metadata = {
+                "path": video_file,
 
-                    "title": clip.get("title"),
+                "thumbnail": thumbnail_file,
 
-                    "category": clip.get("category"),
+                "metadata": metadata_file,
 
-                    "score": clip.get("score"),
+                "start": clip["start"],
 
-                    "heuristic_score": clip.get("heuristic_score"),
+                "end": clip["end"]
 
-                    "llm_score": clip.get("llm_score"),
+            })
 
-                    "confidence": clip.get("confidence"),
+        job.generated_clips = generated
+    # --------------------------------------------------------
+    # Renderização principal
+    # --------------------------------------------------------
 
-                    "start": clip["start"],
+    def _render_clip(
+        self,
+        source_video,
+        output_video,
+        start,
+        end,
+        subtitles
+    ):
 
-                    "end": clip["end"],
+        duration = self._clip_duration(start, end)
 
-                    "duration": duration
+        vf = self._build_filter(subtitles)
 
-                }
+        command = [
 
-                with open(
-                    metadata_file,
-                    "w",
-                    encoding="utf8"
-                ) as f:
+            "ffmpeg",
 
-                    json.dump(
-                        metadata,
-                        f,
-                        indent=4,
-                        ensure_ascii=False
-                    )
+            "-y",
 
-                job.generated_clips.append({
+            "-ss",
+            str(start),
 
-                    "title": metadata["title"],
+            "-i",
+            str(source_video),
 
-                    "category": metadata["category"],
+            "-t",
+            str(duration),
 
-                    "score": metadata["score"],
+            "-vf",
+            vf,
 
-                    "confidence": metadata["confidence"],
+            "-r",
+            str(self.FPS),
 
-                    "duration": duration,
+            "-c:v",
+            self.VIDEO_CODEC,
 
-                    "start": clip["start"],
+            "-preset",
+            self.PRESET,
 
-                    "end": clip["end"],
+            "-crf",
+            str(self.CRF),
 
-                    "path": video_file,
+            "-pix_fmt",
+            "yuv420p",
 
-                    "thumbnail": thumb_file,
+            "-c:a",
+            self.AUDIO_CODEC,
 
-                    "metadata": metadata_file
+            "-b:a",
+            self.AUDIO_BITRATE,
 
-                })
+            "-movflags",
+            "+faststart",
 
-            except ffmpeg.Error as e:
+            str(output_video)
 
-                print(e)
+        ]
 
-    def _safe_filename(self, text):
+        self._run_ffmpeg(command)
 
-        text = text.lower()
 
-        text = re.sub(r"[^\w\s-]", "", text)
+    # --------------------------------------------------------
+    # Criar thumbnail
+    # --------------------------------------------------------
 
-        text = re.sub(r"\s+", "_", text)
+    def _create_thumbnail(
+        self,
+        video_file,
+        thumbnail_file
+    ):
 
-        return text[:40]
+        command = [
+
+            "ffmpeg",
+
+            "-y",
+
+            "-i",
+            str(video_file),
+
+            "-ss",
+            "00:00:01",
+
+            "-frames:v",
+            "1",
+
+            "-q:v",
+            "2",
+
+            str(thumbnail_file)
+
+        ]
+
+        self._run_ffmpeg(command)
+
+    # --------------------------------------------------------
+    # Verificar FFmpeg
+    # --------------------------------------------------------
+
+    def _check_ffmpeg(self):
+
+        ffmpeg = shutil.which("ffmpeg")
+
+        if ffmpeg is None:
+
+            raise RuntimeError(
+
+                "FFmpeg não encontrado. "
+                "Instale o FFmpeg e adicione-o ao PATH."
+
+            )
+
+        return ffmpeg
+
+    # --------------------------------------------------------
+    # Garantir pasta
+    # --------------------------------------------------------
+
+    def _ensure_directory(self, path):
+
+        path = Path(path)
+
+        path.mkdir(
+            parents=True,
+            exist_ok=True
+        )
+
+        return path
+
+    # --------------------------------------------------------
+    # Duração do clip
+    # --------------------------------------------------------
+
+    def _clip_duration(
+        self,
+        start,
+        end
+    ):
+
+        return max(
+            0.1,
+            end - start
+        )
+
+    # --------------------------------------------------------
+    # Limpar ficheiros temporários
+    # --------------------------------------------------------
+
+    def _cleanup(self, *files):
+
+        for file in files:
+
+            if file is None:
+                continue
+
+            file = Path(file)
+
+            if file.exists():
+
+                try:
+                    file.unlink()
+
+                except Exception:
+                    pass
+
+    # --------------------------------------------------------
+    # Construção dos filtros FFmpeg
+    # --------------------------------------------------------
+
+    def _build_filter(self, subtitle_file):
+
+        filters = []
+
+        filters.extend(
+            self._video_filters()
+        )
+
+        subtitle_file = Path(subtitle_file)
+
+        if subtitle_file.exists():
+
+            ass_path = (
+                subtitle_file
+                .resolve()
+                .as_posix()
+                .replace("\\", "/")
+                .replace(":", "\\:")
+            )
+
+            filters.append(
+                f"ass='{ass_path}'"
+            )
+
+        return ",".join(filters)
+
+    # --------------------------------------------------------
+    # Filtros de vídeo
+    # --------------------------------------------------------
+
+    def _video_filters(self):
+
+        filters = []
+
+        # Mantém a proporção
+        filters.append(
+
+            f"scale={self.OUTPUT_WIDTH}:{self.OUTPUT_HEIGHT}:"
+            "force_original_aspect_ratio=increase"
+
+        )
+
+        # Crop central
+        filters.append(
+
+            f"crop={self.OUTPUT_WIDTH}:{self.OUTPUT_HEIGHT}"
+
+        )
+
+        # Nitidez
+
+        filters.append(
+
+            "unsharp=5:5:1.0:5:5:0.0"
+
+        )
+
+        # Saturação
+
+        filters.append(
+
+            "eq=saturation=1.08:contrast=1.03"
+
+        )
+
+        return filters
+
+    # --------------------------------------------------------
+    # Zoom (preparação)
+    # --------------------------------------------------------
+
+    def _zoom_filter(self):
+
+        return (
+            "zoompan="
+            "z='min(zoom+0.0008,1.10)':"
+            "x='iw/2-(iw/zoom/2)':"
+            "y='ih/2-(ih/zoom/2)':"
+            f"d={self.FPS}"
+        )
+
+    # --------------------------------------------------------
+    # Face Tracking (placeholder)
+    # --------------------------------------------------------
+
+    def _face_tracking_filter(self):
+
+        """
+        Este método ficará responsável por calcular
+        automaticamente o crop usando um detector
+        de rosto (MediaPipe/YOLO).
+
+        Nesta versão devolve None.
+        """
+
+        return None
+
+    # --------------------------------------------------------
+    # Tratamento de erros FFmpeg
+    # --------------------------------------------------------
+
+    def _run_ffmpeg(self, command):
+
+        try:
+
+            subprocess.run(
+
+                command,
+
+                check=True,
+
+                capture_output=True,
+
+                text=True
+
+            )
+
+        except subprocess.CalledProcessError as exc:
+
+            raise RuntimeError(
+
+                "Erro ao gerar clip:\n\n"
+                + exc.stderr
+
+            ) from exc
