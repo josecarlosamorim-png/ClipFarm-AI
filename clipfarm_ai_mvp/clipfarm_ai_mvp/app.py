@@ -1,5 +1,4 @@
 from pathlib import Path
-import tempfile
 
 import streamlit as st
 
@@ -11,167 +10,189 @@ st.set_page_config(
 )
 
 st.title("🎬 ClipFinder AI V3")
-
 st.write("Analisa vídeos e gera automaticamente os melhores clips.")
 
-video = st.file_uploader(
-    "Importar vídeo",
-    type=["mp4", "mov", "mkv"]
+# ======================================================
+# Pasta de vídeos
+# ======================================================
+
+INPUT_DIR = Path(__file__).resolve().parent.parent / "input"
+
+VIDEO_EXTENSIONS = {
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".avi",
+    ".webm",
+}
+
+videos = []
+
+if INPUT_DIR.exists():
+    videos = sorted(
+        [
+            f
+            for f in INPUT_DIR.iterdir()
+            if f.is_file()
+            and f.suffix.lower() in VIDEO_EXTENSIONS
+        ]
+    )
+
+if not videos:
+    st.warning("Nenhum vídeo encontrado na pasta input.")
+    st.stop()
+
+selected_video = st.selectbox(
+    "📂 Escolhe um vídeo",
+    videos,
+    format_func=lambda p: p.name,
 )
 
-if video:
+st.success(f"Vídeo selecionado: {selected_video.name}")
 
-    st.success(video.name)
+# ======================================================
+# Processamento
+# ======================================================
 
-    if st.button("🚀 Analisar"):
+if st.button("🚀 Analisar"):
 
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=Path(video.name).suffix
-        ) as tmp:
+    with st.spinner("A processar vídeo..."):
 
-            tmp.write(video.read())
-            video_path = tmp.name
+        orchestrator = Orchestrator()
 
-        with st.spinner("A processar vídeo..."):
-
-            orchestrator = Orchestrator()
-            resultado = orchestrator.process_video(video_path)
-
-        st.success("✅ Pipeline concluída!")
-
-        # ======================
-        # Metadados
-        # ======================
-
-        st.header("📹 Informações do vídeo")
-
-        c1, c2, c3 = st.columns(3)
-
-        c1.metric("Duração", f"{resultado.duration:.2f}s")
-        c2.metric("FPS", resultado.fps)
-        c3.metric(
-            "Resolução",
-            f"{resultado.width}×{resultado.height}"
+        resultado = orchestrator.process_video(
+            str(selected_video)
         )
 
-        st.write(f"Frames: {resultado.total_frames}")
-        st.write(f"Cenas: {len(resultado.scenes)}")
+    st.success("✅ Pipeline concluída!")
 
-        if resultado.metadata and "language" in resultado.metadata:
-            st.write(f"Idioma: {resultado.metadata['language']}")
+    # ======================================================
+    # Metadados
+    # ======================================================
 
-        # ======================
-        # Transcrição
-        # ======================
+    st.header("📹 Informações do vídeo")
 
-        if resultado.transcript:
+    c1, c2, c3 = st.columns(3)
 
-            st.header("📝 Transcrição")
+    c1.metric("Duração", f"{resultado.duration:.2f}s")
+    c2.metric("FPS", resultado.fps)
+    c3.metric(
+        "Resolução",
+        f"{resultado.width}×{resultado.height}"
+    )
 
-            for sentence in resultado.transcript[:10]:
+    st.write(f"Frames: {resultado.total_frames}")
+    st.write(f"Cenas: {len(resultado.scenes)}")
+
+    if resultado.metadata and "language" in resultado.metadata:
+        st.write(f"Idioma: {resultado.metadata['language']}")
+
+    # ======================================================
+    # Transcrição
+    # ======================================================
+
+    if resultado.transcript:
+
+        st.header("📝 Transcrição")
+
+        for sentence in resultado.transcript[:10]:
+            st.write(
+                f"[{sentence['start']:.2f}s] {sentence['text']}"
+            )
+
+    # ======================================================
+    # Segmentos
+    # ======================================================
+
+    if resultado.segments:
+
+        st.header("📚 Segmentos")
+
+        for i, segment in enumerate(resultado.segments, start=1):
+
+            with st.expander(
+                f"Segmento {i} ({segment['start']:.2f}s → {segment['end']:.2f}s)"
+            ):
+
+                st.write(segment.get("text", ""))
+
+    # ======================================================
+    # Melhores Clips
+    # ======================================================
+
+    if resultado.best_clips:
+
+        st.header("🏆 Melhores Clips")
+
+        for clip in resultado.best_clips[:5]:
+
+            score = clip.get("score", "N/A")
+            start = clip.get("start", 0)
+            end = clip.get("end", 0)
+
+            with st.expander(
+                f"⭐ {score} pontos | {start:.1f}s → {end:.1f}s"
+            ):
+
+                st.write(f"**Título:** {clip.get('title', 'Sem título')}")
+                st.write(f"**Categoria:** {clip.get('category', 'N/A')}")
+
+                confidence = clip.get("confidence")
+
+                if confidence is not None:
+                    st.write(f"**Confiança:** {confidence:.2f}")
 
                 st.write(
-                    f"[{sentence['start']:.2f}s] {sentence['text']}"
+                    f"**Heurística:** {clip.get('heuristic_score', 'N/A')}"
                 )
 
-        # ======================
-        # Segmentos
-        # ======================
+                st.write(
+                    f"**LLM:** {clip.get('llm_score', 'N/A')}"
+                )
 
-        if resultado.segments:
+                reason = clip.get("reason")
 
-            st.header("📚 Segmentos")
+                if reason:
+                    st.write("### Justificação")
+                    st.write(reason)
 
-            for i, segment in enumerate(resultado.segments, start=1):
+                st.write("### Transcrição")
+                st.write(clip.get("text", ""))
 
-                with st.expander(
-                    f"Segmento {i} ({segment['start']:.2f}s → {segment['end']:.2f}s)"
-                ):
+    # ======================================================
+    # Clips Gerados
+    # ======================================================
 
-                    st.write(segment.get("text", ""))
+    if resultado.generated_clips:
 
-        # ======================
-        # Melhores Clips
-        # ======================
+        st.header("🎥 Clips Gerados")
 
-        if resultado.best_clips:
+        for i, clip in enumerate(resultado.generated_clips):
 
-            st.header("🏆 Melhores Clips")
+            path = clip.get("path")
 
-            for clip in resultado.best_clips[:5]:
+            if path is None:
+                continue
 
-                score = clip.get("score", "N/A")
-                start = clip.get("start", 0)
-                end = clip.get("end", 0)
+            title = clip.get("title") or Path(path).stem
+            score = clip.get("score", "N/A")
+            duration = clip.get("duration")
 
-                with st.expander(
-                    f"⭐ {score} pontos | {start:.1f}s → {end:.1f}s"
-                ):
+            st.subheader(title)
 
-                    st.write(f"**Título:** {clip.get('title', 'Sem título')}")
-                    st.write(f"**Categoria:** {clip.get('category', 'N/A')}")
+            st.write(f"Score: {score}")
 
-                    confidence = clip.get("confidence")
+            if duration is not None:
+                st.write(f"Duração: {duration:.1f}s")
 
-                    if confidence is not None:
-                        st.write(
-                            f"**Confiança:** {confidence:.2f}"
-                        )
+            st.video(str(path))
 
-                    st.write(
-                        f"**Heurística:** {clip.get('heuristic_score', 'N/A')}"
-                    )
+            with open(path, "rb") as f:
 
-                    st.write(
-                        f"**LLM:** {clip.get('llm_score', 'N/A')}"
-                    )
-
-                    reason = clip.get("reason")
-
-                    if reason:
-                        st.write("")
-                        st.write("### Justificação")
-                        st.write(reason)
-
-                    st.write("")
-                    st.write("### Transcrição")
-                    st.write(clip.get("text", ""))
-
-        # ======================
-        # Clips exportados
-        # ======================
-
-        if resultado.generated_clips:
-
-            st.header("🎥 Clips Gerados")
-
-            for i, clip in enumerate(resultado.generated_clips):
-
-                path = clip.get("path")
-
-                if path is None:
-                    continue
-
-                title = clip.get("title") or Path(path).stem
-                score = clip.get("score", "N/A")
-                duration = clip.get("duration")
-
-                st.subheader(title)
-
-                st.write(f"Score: {score}")
-
-                if duration is not None:
-                    st.write(f"Duração: {duration:.1f}s")
-
-                st.video(str(path))
-
-                with open(path, "rb") as f:
-
-                    st.download_button(
-                        label="📥 Download",
-                        data=f,
-                        file_name=Path(path).name,
-                        mime="video/mp4",
-                        key=f"download_{i}"
-                    )
+                st.download_button(
+                    label="📥 Download",
+                    data=f,
+                    file_name=Path(path).name,
+                    mime="video/mp4",
+                    key=f"download_{i}"
+                )
