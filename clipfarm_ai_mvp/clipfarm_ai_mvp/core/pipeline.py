@@ -67,6 +67,24 @@ class Pipeline:
 
         self._step("Viral Scorer", self.viral.score, job)
 
+
+        print("Best clips:", len(job.best_clips))
+
+        self._step(
+            "Clip Generator",
+            self.clip_generator.generate,
+            job
+        )
+
+        self._step(
+            "Subtitle Generator",
+            self.subtitle_generator.generate,
+            job
+        )
+
+        print("\n===== PIPELINE TERMINADA =====")
+
+
         print("Best clips:", len(job.best_clips))
 
         self._step(
