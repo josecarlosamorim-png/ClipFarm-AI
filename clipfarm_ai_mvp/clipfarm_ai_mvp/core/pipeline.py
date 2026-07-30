@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from core.job import ProcessingJob
+
 from video.loader import VideoLoader
 from video.scene_detector import SceneDetector
 from audio.extractor import AudioExtractor
@@ -17,16 +19,12 @@ class Pipeline:
 
     def run(self, video: Path):
 
-        info = self.loader.load(video)
+        job = ProcessingJob(video)
 
-        scenes = self.detector.detect(video)
+        self.loader.load(job)
 
-        audio = self.audio.extract(video)
+        self.detector.detect(job)
 
-        info["audio"] = str(audio)
+        self.audio.extract(job)
 
-        info["scene_changes"] = len(scenes)
-
-        info["scenes"] = scenes[:20]
-
-        return info
+        return job
