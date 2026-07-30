@@ -38,3 +38,13 @@ if video:
         st.success("Pipeline executada!")
 
         st.write(resultado)
+
+if resultado.transcript:
+
+    st.subheader("Primeiras frases")
+
+    for segment in resultado.transcript[:10]:
+
+        st.write(
+            f"[{segment['start']:.2f}s] {segment['text']}"
+        )
