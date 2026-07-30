@@ -5,7 +5,7 @@ from moviepy import VideoFileClip
 
 class AudioExtractor:
 
-    def extract(self, video_path: Path):
+    def extract(self, job):
 
         output_folder = Path("cache")
 
@@ -13,7 +13,7 @@ class AudioExtractor:
 
         audio_path = output_folder / "audio.wav"
 
-        video = VideoFileClip(str(video_path))
+        video = VideoFileClip(str(job.video_path))
 
         video.audio.write_audiofile(
             str(audio_path),
@@ -22,4 +22,4 @@ class AudioExtractor:
 
         video.close()
 
-        return audio_path
+        job.audio_path = audio_path
