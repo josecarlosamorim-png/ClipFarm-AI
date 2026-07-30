@@ -6,6 +6,7 @@ from transcription.whisper_engine import WhisperEngine
 from video.loader import VideoLoader
 from video.scene_detector import SceneDetector
 from audio.extractor import AudioExtractor
+from ai.viral_scorer import ViralScorer
 
 
 class Pipeline:
@@ -22,6 +23,8 @@ class Pipeline:
 
         self.segment_extractor = SegmentExtractor()
 
+        self.viral = ViralScorer()
+
     def run(self, video: Path):
 
         job = ProcessingJob(video)
@@ -35,5 +38,7 @@ class Pipeline:
         self.whisper.transcribe(job)
 
         self.segment_extractor.extract(job)
+
+        self.viral.score(job)
 
         return job
