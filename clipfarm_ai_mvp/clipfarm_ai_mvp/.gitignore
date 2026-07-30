@@ -1,6 +1,32 @@
+<<<<<<< Updated upstream
 .venv/
 __pycache__/
 *.pyc
 cache/
 output/
 .env
+=======
+# Vídeos de entrada
+clipfarm_ai_mvp/input/
+
+# Outputs
+clipfarm_ai_mvp/output/
+
+# Logs
+clipfarm_ai_mvp/logs/
+
+# Cache
+clipfarm_ai_mvp/cache/
+
+# Base de dados local
+clipfarm_ai_mvp/clipfarm_ai_mvp/database/*.db
+
+# Input videos
+clipfarm_ai_mvp/input/
+
+# Logs
+clipfarm_ai_mvp/logs/
+
+# Local database
+clipfarm_ai_mvp/clipfarm_ai_mvp/database/*.db
+>>>>>>> Stashed changes

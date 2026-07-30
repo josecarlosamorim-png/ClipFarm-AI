@@ -1,27 +1,23 @@
-# Python
-__pycache__/
-*.py[cod]
+# Vídeos de entrada
+clipfarm_ai_mvp/input/
 
-# Virtual environment
-.venv/
-clipfarm_ai_mvp/.venv/
-
-# Environment variables
-.env
-clipfarm_ai_mvp/.env
-
-# Generated folders
-cache/
-output/
-clipfarm_ai_mvp/cache/
+# Outputs
 clipfarm_ai_mvp/output/
 
-# Streamlit
-.streamlit/
+# Logs
+clipfarm_ai_mvp/logs/
 
-# VS Code
-.vscode/
+# Cache
+clipfarm_ai_mvp/cache/
 
-# OS
-.DS_Store
-Thumbs.db
+# Base de dados local
+clipfarm_ai_mvp/clipfarm_ai_mvp/database/*.db
+
+# Input videos
+clipfarm_ai_mvp/input/
+
+# Logs
+clipfarm_ai_mvp/logs/
+
+# Local database
+clipfarm_ai_mvp/clipfarm_ai_mvp/database/*.db
