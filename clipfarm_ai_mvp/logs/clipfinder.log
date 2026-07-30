@@ -1,0 +1,40 @@
+2026-07-30 21:33:31,084 | INFO | HTTP Request: GET https://huggingface.co/api/agent-harnesses "HTTP/1.1 200 OK"
+2026-07-30 21:33:31,224 | INFO | HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-small/revision/main "HTTP/1.1 200 OK"
+2026-07-30 21:33:33,136 | INFO | 
+2026-07-30 21:33:33,138 | INFO | ========== NOVO PROCESSAMENTO ==========
+2026-07-30 21:33:33,138 | INFO | C:\Users\JOSAMO~1\AppData\Local\Temp\tmpvmra6ued.mp4
+2026-07-30 21:33:33,138 | INFO | ============================================================
+2026-07-30 21:33:33,138 | INFO | Video Loader
+2026-07-30 21:33:33,265 | INFO | Video Loader concluído em 0.13s
+2026-07-30 21:33:33,266 | INFO | ============================================================
+2026-07-30 21:33:33,266 | INFO | Scene Detection
+2026-07-30 21:33:36,196 | INFO | Scene Detection concluído em 2.93s
+2026-07-30 21:33:36,196 | INFO | Scenes: 51
+2026-07-30 21:33:36,197 | INFO | ============================================================
+2026-07-30 21:33:36,197 | INFO | Audio Extraction
+2026-07-30 21:33:37,116 | INFO | Audio Extraction concluído em 0.92s
+2026-07-30 21:33:37,116 | INFO | ============================================================
+2026-07-30 21:33:37,116 | INFO | Whisper
+2026-07-30 21:33:37,334 | INFO | Processing audio with duration 01:12.210
+2026-07-30 21:33:37,656 | INFO | VAD filter removed 00:36.322 of audio
+2026-07-30 21:33:39,692 | INFO | Detected language 'en' with probability 0.98
+2026-07-30 21:34:35,146 | INFO | Whisper concluído em 58.03s
+2026-07-30 21:34:35,146 | INFO | Transcript: 14
+2026-07-30 21:34:35,146 | INFO | ============================================================
+2026-07-30 21:34:35,146 | INFO | Segment Extractor
+2026-07-30 21:34:35,146 | INFO | Segment Extractor concluído em 0.00s
+2026-07-30 21:34:35,146 | INFO | Segments: 2
+2026-07-30 21:34:35,148 | INFO | ============================================================
+2026-07-30 21:34:35,148 | INFO | Viral Scorer
+2026-07-30 21:34:35,148 | INFO | Viral Scorer concluído em 0.00s
+2026-07-30 21:34:35,148 | INFO | Best Clips: 2
+2026-07-30 21:34:35,148 | INFO | ============================================================
+2026-07-30 21:34:35,148 | INFO | Clip Generator
+2026-07-30 21:34:52,261 | INFO | Clip Generator concluído em 17.11s
+2026-07-30 21:34:52,262 | INFO | ============================================================
+2026-07-30 21:34:52,262 | INFO | Subtitle Generator
+2026-07-30 21:34:52,268 | INFO | Subtitle Generator concluído em 0.01s
+2026-07-30 21:34:52,268 | INFO | 
+2026-07-30 21:34:52,268 | INFO | ===== PIPELINE TERMINADA =====
+2026-07-30 21:34:52,268 | INFO | Tempo total: 79.13s
+2026-07-30 21:34:52,269 | INFO | Clips gerados: 2
