@@ -1,76 +1,41 @@
 from core.job import ProcessingJob
 
+from ai.scoring_rules import ScoringRules
+
 
 class ViralScorer:
 
+    def __init__(self):
+
+        self.rules = ScoringRules()
+
     def score(self, job: ProcessingJob):
 
-        scored_segments = []
+        clips = []
 
         for segment in job.segments:
 
-            score = 0
-            reasons = []
+            score, reasons = self.rules.score(segment)
 
-            duration = segment["end"] - segment["start"]
+            clips.append({
 
-            # Duração ideal
-            if 20 <= duration <= 45:
-                score += 20
-                reasons.append("Boa duração")
-
-            # Texto suficientemente longo
-            words = segment["text"].split()
-
-            if len(words) > 50:
-                score += 20
-                reasons.append("Conteúdo rico")
-
-            # Hook inicial
-            hook_words = [
-                "imagina",
-                "sabias",
-                "nunca",
-                "erro",
-                "segredo",
-                "atenção",
-                "porque",
-                "como"
-            ]
-
-            text = segment["text"].lower()
-
-            if any(word in text for word in hook_words):
-                score += 30
-                reasons.append("Possível hook")
-
-            # Perguntas prendem atenção
-            if "?" in segment["text"]:
-                score += 15
-                reasons.append("Pergunta")
-
-            # Exclamações
-            if "!" in segment["text"]:
-                score += 15
-                reasons.append("Ênfase")
-
-            scored_segments.append({
-
-                "start": segment["start"],
-
-                "end": segment["end"],
-
-                "text": segment["text"],
+                **segment,
 
                 "score": score,
 
-                "reasons": reasons
+                "reasons": reasons,
+
+                "title": None,
+
+                "category": None,
+
+                "confidence": None
 
             })
 
-        scored_segments.sort(
+        clips.sort(
             key=lambda x: x["score"],
             reverse=True
         )
 
-        job.best_clips = scored_segments
+        job.best_clips = clips
