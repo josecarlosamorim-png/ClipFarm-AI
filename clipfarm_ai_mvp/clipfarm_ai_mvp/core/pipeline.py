@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from core.job import ProcessingJob
-
+from transcription.whisper_engine import WhisperEngine
 from video.loader import VideoLoader
 from video.scene_detector import SceneDetector
 from audio.extractor import AudioExtractor
@@ -16,6 +16,8 @@ class Pipeline:
         self.detector = SceneDetector()
 
         self.audio = AudioExtractor()
+        
+        self.whisper = WhisperEngine()
 
     def run(self, video: Path):
 
@@ -26,5 +28,7 @@ class Pipeline:
         self.detector.detect(job)
 
         self.audio.extract(job)
+
+        self.whisper.transcribe(job)
 
         return job
