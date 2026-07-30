@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from ai.segment_extractor import SegmentExtractor
 from core.job import ProcessingJob
 from transcription.whisper_engine import WhisperEngine
 from video.loader import VideoLoader
@@ -19,6 +20,8 @@ class Pipeline:
         
         self.whisper = WhisperEngine()
 
+        self.segment_extractor = SegmentExtractor()
+
     def run(self, video: Path):
 
         job = ProcessingJob(video)
@@ -30,5 +33,7 @@ class Pipeline:
         self.audio.extract(job)
 
         self.whisper.transcribe(job)
+
+        self.segment_extractor.extract(job)
 
         return job
