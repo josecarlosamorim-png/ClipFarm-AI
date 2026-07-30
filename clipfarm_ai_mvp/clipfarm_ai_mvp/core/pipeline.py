@@ -10,6 +10,8 @@ from audio.extractor import AudioExtractor
 
 from transcription.whisper_engine import WhisperEngine
 
+from subtitle.generator import SubtitleGenerator
+
 from ai.segment_extractor import SegmentExtractor
 from ai.viral_scorer import ViralScorer
 
@@ -32,29 +34,26 @@ class Pipeline:
 
         self.clip_generator = ClipGenerator()
 
+        self.subtitle_generator = SubtitleGenerator()
+
     def run(self, video: Path):
 
         job = ProcessingJob(video)
 
-        # 1. Carrega metadados do vídeo
         self.loader.load(job)
 
-        # 2. Deteta mudanças de cena
         self.detector.detect(job)
 
-        # 3. Extrai o áudio
         self.audio.extract(job)
 
-        # 4. Transcreve o áudio
         self.whisper.transcribe(job)
 
-        # 5. Cria segmentos
         self.segment_extractor.extract(job)
 
-        # 6. Classifica os segmentos
         self.viral.score(job)
 
-        # 7. Gera automaticamente os melhores clips
         self.clip_generator.generate(job)
+
+        self.subtitle_generator.generate(job)
 
         return job
