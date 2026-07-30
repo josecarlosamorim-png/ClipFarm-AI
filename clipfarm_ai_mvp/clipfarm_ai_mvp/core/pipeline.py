@@ -2,6 +2,7 @@ from pathlib import Path
 
 from video.loader import VideoLoader
 from video.scene_detector import SceneDetector
+from audio.extractor import AudioExtractor
 
 
 class Pipeline:
