@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 
 from core.job import ProcessingJob
 
@@ -21,39 +22,65 @@ class Pipeline:
     def __init__(self):
 
         self.loader = VideoLoader()
-
         self.detector = SceneDetector()
-
         self.audio = AudioExtractor()
-
         self.whisper = WhisperEngine()
-
         self.segment_extractor = SegmentExtractor()
-
         self.viral = ViralScorer()
-
         self.clip_generator = ClipGenerator()
-
         self.subtitle_generator = SubtitleGenerator()
+
+    def _step(self, name, func, job):
+
+        print(f"\n========== {name} ==========")
+
+        t0 = time.time()
+
+        func(job)
+
+        print(f"{name} concluído em {time.time()-t0:.2f}s")
+
+        print("--------------------------------")
 
     def run(self, video: Path):
 
         job = ProcessingJob(video)
 
-        self.loader.load(job)
+        self._step("Video Loader", self.loader.load, job)
 
-        self.detector.detect(job)
+        self._step("Scene Detection", self.detector.detect, job)
+        print("Scenes:", len(job.scenes))
 
-        self.audio.extract(job)
+        self._step("Audio Extraction", self.audio.extract, job)
 
-        self.whisper.transcribe(job)
+        self._step("Whisper", self.whisper.transcribe, job)
 
-        self.segment_extractor.extract(job)
+        print("Transcript:", len(job.transcript))
 
-        self.viral.score(job)
+        self._step(
+            "Segment Extractor",
+            self.segment_extractor.extract,
+            job
+        )
 
-        self.clip_generator.generate(job)
+        print("Segments:", len(job.segments))
 
-        self.subtitle_generator.generate(job)
+        self._step("Viral Scorer", self.viral.score, job)
+
+        print("Best clips:", len(job.best_clips))
+
+        self._step(
+            "Clip Generator",
+            self.clip_generator.generate,
+            job
+        )
+
+        self._step(
+            "Subtitle Generator",
+            self.subtitle_generator.generate,
+            job
+        )
+
+        print("\n===== PIPELINE TERMINADA =====")
 
         return job
