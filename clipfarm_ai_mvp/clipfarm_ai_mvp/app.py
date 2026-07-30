@@ -69,9 +69,9 @@ if video:
 
                     st.write(segment["text"])
 
-        if resultado.best_clips:
+                if resultado.best_clips:
 
-            st.subheader("Melhores Clips")
+            st.subheader("🏆 Melhores Clips")
 
             for clip in resultado.best_clips[:5]:
 
@@ -80,12 +80,43 @@ if video:
                     f"{clip['start']:.1f}s → {clip['end']:.1f}s"
                 ):
 
+                    st.write(f"**Título sugerido:** {clip['title']}")
+                    st.write(f"**Categoria:** {clip['category']}")
+                    st.write(
+                        f"**Confiança:** {clip['confidence']:.2f}"
+                        if clip["confidence"] is not None
+                        else "**Confiança:** N/A"
+                    )
+
+                    st.write(
+                        f"**Pontuação Total:** {clip['score']}"
+                    )
+
+                    st.write(
+                        f"• Heurística: {clip['heuristic_score']}"
+                    )
+
+                    st.write(
+                        f"• IA: {clip['llm_score']}"
+                    )
+
+                    st.write("")
+
                     st.write("### Motivos")
 
                     for reason in clip["reasons"]:
 
                         st.write(f"• {reason}")
 
+                    if clip["reason"]:
+
+                        st.write("")
+                        st.write("### Justificação da IA")
+
+                        st.write(clip["reason"])
+
                     st.write("")
+
+                    st.write("### Transcrição")
 
                     st.write(clip["text"])
