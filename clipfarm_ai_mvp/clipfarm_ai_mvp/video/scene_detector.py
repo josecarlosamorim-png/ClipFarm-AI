@@ -1,19 +1,19 @@
 import cv2
 
+from core.job import ProcessingJob
+
 
 class SceneDetector:
 
-    def detect(self, job):
+    def detect(self, job: ProcessingJob):
 
-        capture = cv2.VideoCapture(str(video_path))
+        capture = cv2.VideoCapture(str(job.video_path))
 
         if not capture.isOpened():
             raise RuntimeError("Erro ao abrir vídeo.")
 
         previous = None
-
         scenes = []
-
         frame_number = 0
 
         threshold = 35
@@ -45,18 +45,7 @@ class SceneDetector:
 
         capture.release()
 
-        return [
-
-            round(frame / fps, 2)
-
-            for frame in scenes
-
-        ]
-
-
         job.scenes = [
-
-    round(frame / fps, 2)
-
-    for frame in scenes
-]
+            round(frame / fps, 2)
+            for frame in scenes
+        ]
