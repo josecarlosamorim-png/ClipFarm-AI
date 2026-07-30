@@ -13,11 +13,17 @@ class Pipeline:
 
         self.detector = SceneDetector()
 
+        self.audio = AudioExtractor()
+
     def run(self, video: Path):
 
         info = self.loader.load(video)
 
         scenes = self.detector.detect(video)
+
+        audio = self.audio.extract(video)
+
+        info["audio"] = str(audio)
 
         info["scene_changes"] = len(scenes)
 
