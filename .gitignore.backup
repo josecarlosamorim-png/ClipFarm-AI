@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+clipfarm_ai_mvp/.venv/
+
+# Environment variables
+.env
+clipfarm_ai_mvp/.env
+
+# Generated folders
+cache/
+output/
+clipfarm_ai_mvp/cache/
+clipfarm_ai_mvp/output/
+
+# Streamlit
+.streamlit/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

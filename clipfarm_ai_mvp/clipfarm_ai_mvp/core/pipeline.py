@@ -2,6 +2,7 @@ from pathlib import Path
 import time
 
 from core.job import ProcessingJob
+from core.logger import logger
 
 from video.loader import VideoLoader
 from video.scene_detector import SceneDetector
@@ -30,75 +31,138 @@ class Pipeline:
         self.clip_generator = ClipGenerator()
         self.subtitle_generator = SubtitleGenerator()
 
-    def _step(self, name, func, job):
+    def _execute_step(
+        self,
+        job: ProcessingJob,
+        name: str,
+        progress: int,
+        func,
+    ):
 
-        print(f"\n========== {name} ==========")
+        logger.info("=" * 60)
+        logger.info(name)
 
-        t0 = time.time()
+        job.current_stage = name
+        job.progress = progress
+        job.status = "running"
 
-        func(job)
+        start = time.time()
 
-        print(f"{name} concluído em {time.time()-t0:.2f}s")
+        try:
 
-        print("--------------------------------")
+            func(job)
+
+            elapsed = time.time() - start
+
+            logger.info(
+                "%s concluído em %.2fs",
+                name,
+                elapsed
+            )
+
+            job.add_log(
+                f"{name} ({elapsed:.2f}s)"
+            )
+
+        except Exception as e:
+
+            logger.exception(e)
+
+            job.add_error(
+                f"{name}: {str(e)}"
+            )
+
+            raise
 
     def run(self, video: Path):
 
-        job = ProcessingJob(video)
+        job = ProcessingJob(video_path=video)
 
-        self._step("Video Loader", self.loader.load, job)
+        logger.info("")
+        logger.info("========== NOVO PROCESSAMENTO ==========")
+        logger.info(video)
 
-        self._step("Scene Detection", self.detector.detect, job)
-        print("Scenes:", len(job.scenes))
+        self._execute_step(
+            job,
+            "Video Loader",
+            5,
+            self.loader.load,
+        )
 
-        self._step("Audio Extraction", self.audio.extract, job)
+        self._execute_step(
+            job,
+            "Scene Detection",
+            15,
+            self.detector.detect,
+        )
 
-        self._step("Whisper", self.whisper.transcribe, job)
+        logger.info(
+            "Scenes: %d",
+            len(job.scenes)
+        )
 
-        print("Transcript:", len(job.transcript))
+        self._execute_step(
+            job,
+            "Audio Extraction",
+            25,
+            self.audio.extract,
+        )
 
-        self._step(
+        self._execute_step(
+            job,
+            "Whisper",
+            45,
+            self.whisper.transcribe,
+        )
+
+        logger.info(
+            "Transcript: %d",
+            len(job.transcript)
+        )
+
+        self._execute_step(
+            job,
             "Segment Extractor",
+            60,
             self.segment_extractor.extract,
-            job
         )
 
-        print("Segments:", len(job.segments))
+        logger.info(
+            "Segments: %d",
+            len(job.segments)
+        )
 
-        self._step("Viral Scorer", self.viral.score, job)
+        self._execute_step(
+            job,
+            "Viral Scorer",
+            75,
+            self.viral.score,
+        )
 
+        logger.info(
+            "Best Clips: %d",
+            len(job.best_clips)
+        )
 
-        print("Best clips:", len(job.best_clips))
-
-        self._step(
+        self._execute_step(
+            job,
             "Clip Generator",
+            90,
             self.clip_generator.generate,
-            job
         )
 
-        self._step(
+        self._execute_step(
+            job,
             "Subtitle Generator",
+            98,
             self.subtitle_generator.generate,
-            job
         )
 
-        print("\n===== PIPELINE TERMINADA =====")
+        job.finish()
 
-
-        print("Best clips:", len(job.best_clips))
-
-        self._step(
-            "Clip Generator",
-            self.clip_generator.generate,
-            job
-        )
-
-        self._step(
-            "Subtitle Generator",
-            self.subtitle_generator.generate,
-            job
-        )
-
-        print("\n===== PIPELINE TERMINADA =====")
+        logger.info("")
+        logger.info("===== PIPELINE TERMINADA =====")
+        logger.info("Tempo total: %.2fs", job.elapsed_time)
+        logger.info("Clips gerados: %d", len(job.generated_clips))
 
         return job
