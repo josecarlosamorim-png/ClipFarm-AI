@@ -1,6 +1,7 @@
 from core.job import ProcessingJob
 
 from ai.scoring_rules import ScoringRules
+from ai.openai_client import OpenAIClient
 
 
 class ViralScorer:
@@ -8,6 +9,7 @@ class ViralScorer:
     def __init__(self):
 
         self.rules = ScoringRules()
+        self.llm = OpenAIClient()
 
     def score(self, job: ProcessingJob):
 
@@ -15,26 +17,42 @@ class ViralScorer:
 
         for segment in job.segments:
 
-            score, reasons = self.rules.score(segment)
+            # Pontuação heurística
+            heuristic_score, reasons = self.rules.score(segment)
+
+            # Análise do LLM (atualmente simulada)
+            llm_result = self.llm.analyze_segment(segment)
+
+            # Combinação das pontuações
+            final_score = int(
+                heuristic_score * 0.4 +
+                llm_result["score"] * 0.6
+            )
 
             clips.append({
 
                 **segment,
 
-                "score": score,
+                "score": final_score,
 
-                "reasons": reasons,
+                "heuristic_score": heuristic_score,
 
-                "title": None,
+                "llm_score": llm_result["score"],
 
-                "category": None,
+                "title": llm_result["title"],
 
-                "confidence": None
+                "category": llm_result["category"],
+
+                "confidence": llm_result["confidence"],
+
+                "reason": llm_result["reason"],
+
+                "reasons": reasons
 
             })
 
         clips.sort(
-            key=lambda x: x["score"],
+            key=lambda clip: clip["score"],
             reverse=True
         )
 
