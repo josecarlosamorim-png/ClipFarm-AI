@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from video.loader import VideoLoader
+from video.scene_detector import SceneDetector
 
 
 class Pipeline:
@@ -9,10 +10,16 @@ class Pipeline:
 
         self.loader = VideoLoader()
 
+        self.detector = SceneDetector()
+
     def run(self, video: Path):
 
         info = self.loader.load(video)
 
-        print(info)
+        scenes = self.detector.detect(video)
+
+        info["scene_changes"] = len(scenes)
+
+        info["scenes"] = scenes[:20]
 
         return info
