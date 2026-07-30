@@ -3,7 +3,7 @@ import cv2
 
 class SceneDetector:
 
-    def detect(self, video_path):
+    def detect(self, job):
 
         capture = cv2.VideoCapture(str(video_path))
 
@@ -52,3 +52,11 @@ class SceneDetector:
             for frame in scenes
 
         ]
+
+
+        job.scenes = [
+
+    round(frame / fps, 2)
+
+    for frame in scenes
+]
