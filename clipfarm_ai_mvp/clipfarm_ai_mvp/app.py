@@ -28,7 +28,6 @@ if video:
         ) as tmp:
 
             tmp.write(video.read())
-
             video_path = tmp.name
 
         orchestrator = Orchestrator()
@@ -37,14 +36,23 @@ if video:
 
         st.success("Pipeline executada!")
 
-        st.write(resultado)
+        st.subheader("Informações do vídeo")
 
-if resultado.transcript:
+        st.write(f"**Duração:** {resultado.duration:.2f} s")
+        st.write(f"**FPS:** {resultado.fps}")
+        st.write(f"**Resolução:** {resultado.width} × {resultado.height}")
+        st.write(f"**Frames:** {resultado.total_frames}")
+        st.write(f"**Cenas detetadas:** {len(resultado.scenes)}")
 
-    st.subheader("Primeiras frases")
+        if "language" in resultado.metadata:
+            st.write(f"**Idioma:** {resultado.metadata['language']}")
 
-    for segment in resultado.transcript[:10]:
+        if resultado.transcript:
 
-        st.write(
-            f"[{segment['start']:.2f}s] {segment['text']}"
-        )
+            st.subheader("Primeiras frases")
+
+            for segment in resultado.transcript[:10]:
+
+                st.write(
+                    f"[{segment['start']:.2f}s] {segment['text']}"
+                )
