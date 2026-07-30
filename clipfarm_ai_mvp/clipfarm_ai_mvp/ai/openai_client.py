@@ -1,4 +1,14 @@
-from openai import OpenAI
-class AIClient:
-    def __init__(self,api_key):
-        self.client=OpenAI(api_key=api_key)
+from ai.llm_interface import LLMInterface
+
+
+class OpenAIClient(LLMInterface):
+
+    def analyze_segment(self, segment: dict) -> dict:
+
+        return {
+            "score": 85,
+            "title": "Título sugerido",
+            "category": "Educação",
+            "confidence": 0.90,
+            "reason": "Resposta simulada"
+        }
