@@ -1,13 +1,18 @@
 from pathlib import Path
 
+from video.loader import VideoLoader
+
 
 class Pipeline:
 
+    def __init__(self):
+
+        self.loader = VideoLoader()
+
     def run(self, video: Path):
 
-        print(f"Video recebido: {video.name}")
+        info = self.loader.load(video)
 
-        return {
-            "status": "ok",
-            "video": video.name
-        }
+        print(info)
+
+        return info
