@@ -2,11 +2,21 @@ from core.job import ProcessingJob
 
 
 class SegmentExtractor:
+    """
+    Cria vários segmentos candidatos a clips virais.
 
-    MIN_DURATION = 15      # segundos
-    MAX_DURATION = 45      # segundos
-    PAUSE_THRESHOLD = 1.5  # pausa entre frases
+    Estratégia:
 
+    - Junta frases consecutivas
+    - Respeita duração mínima e máxima
+    - Gera janelas deslizantes (sliding windows)
+    - Evita segmentos demasiado pequenos
+    """
+
+    MIN_DURATION = 15
+    MAX_DURATION = 45
+
+    WINDOW_STEP = 5
 
     def extract(self, job: ProcessingJob):
 
@@ -18,39 +28,84 @@ class SegmentExtractor:
 
         segments = []
 
-        current = {
-            "start": transcript[0]["start"],
-            "end": transcript[0]["end"],
-            "text": transcript[0]["text"]
-        }
+        n = len(transcript)
 
-        for sentence in transcript[1:]:
+        for start_idx in range(n):
 
-            pause = sentence["start"] - current["end"]
-            duration = current["end"] - current["start"]
+            start = transcript[start_idx]["start"]
 
-            if (
-                pause > self.PAUSE_THRESHOLD
-                or duration >= self.MAX_DURATION
-            ):
+            text = ""
+            end = start
+
+            for end_idx in range(start_idx, n):
+
+                sentence = transcript[end_idx]
+
+                end = sentence["end"]
+
+                duration = end - start
+
+                if duration > self.MAX_DURATION:
+                    break
+
+                if text:
+                    text += " "
+
+                text += sentence["text"]
 
                 if duration >= self.MIN_DURATION:
-                    segments.append(current)
 
-                current = {
-                    "start": sentence["start"],
-                    "end": sentence["end"],
-                    "text": sentence["text"]
-                }
+                    segments.append({
 
-            else:
+                        "start": start,
 
-                current["end"] = sentence["end"]
-                current["text"] += " " + sentence["text"]
+                        "end": end,
 
-        duration = current["end"] - current["start"]
+                        "duration": duration,
 
-        if duration >= self.MIN_DURATION:
-            segments.append(current)
+                        "text": text,
 
-        job.segments = segments
+                        "num_sentences": end_idx - start_idx + 1
+
+                    })
+
+            # Sliding Window
+            if start_idx + self.WINDOW_STEP >= n:
+                continue
+
+        # Remover duplicados
+
+        unique = []
+
+        seen = set()
+
+        for segment in segments:
+
+            key = (
+
+                round(segment["start"], 1),
+
+                round(segment["end"], 1)
+
+            )
+
+            if key in seen:
+                continue
+
+            seen.add(key)
+
+            unique.append(segment)
+
+        unique.sort(
+
+            key=lambda s: (
+
+                s["start"],
+
+                s["end"]
+
+            )
+
+        )
+
+        job.segments = unique
