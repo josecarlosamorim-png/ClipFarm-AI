@@ -37,4 +37,4 @@ if video:
 
         st.success("Pipeline executada!")
 
-        st.json(resultado)
+        st.write(resultado)
