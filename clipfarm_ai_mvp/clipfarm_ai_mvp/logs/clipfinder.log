@@ -1,0 +1,38 @@
+2026-07-30 20:08:27,483 | INFO | HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-small/revision/main "HTTP/1.1 200 OK"
+2026-07-30 20:08:29,226 | INFO | 
+2026-07-30 20:08:29,226 | INFO | ========== NOVO PROCESSAMENTO ==========
+2026-07-30 20:08:29,226 | INFO | C:\Users\JOSAMO~1\AppData\Local\Temp\tmpt16l2we4.mp4
+2026-07-30 20:08:29,226 | INFO | ============================================================
+2026-07-30 20:08:29,227 | INFO | Video Loader
+2026-07-30 20:08:29,329 | INFO | Video Loader concluído em 0.10s
+2026-07-30 20:08:29,330 | INFO | ============================================================
+2026-07-30 20:08:29,330 | INFO | Scene Detection
+2026-07-30 20:08:32,061 | INFO | Scene Detection concluído em 2.73s
+2026-07-30 20:08:32,061 | INFO | Scenes: 51
+2026-07-30 20:08:32,061 | INFO | ============================================================
+2026-07-30 20:08:32,062 | INFO | Audio Extraction
+2026-07-30 20:08:32,871 | INFO | Audio Extraction concluído em 0.81s
+2026-07-30 20:08:32,871 | INFO | ============================================================
+2026-07-30 20:08:32,871 | INFO | Whisper
+2026-07-30 20:08:33,060 | INFO | Processing audio with duration 01:12.210
+2026-07-30 20:08:35,049 | INFO | Detected language 'en' with probability 0.99
+2026-07-30 20:08:53,008 | INFO | Whisper concluído em 20.14s
+2026-07-30 20:08:53,008 | INFO | Transcript: 3
+2026-07-30 20:08:53,008 | INFO | ============================================================
+2026-07-30 20:08:53,009 | INFO | Segment Extractor
+2026-07-30 20:08:53,009 | INFO | Segment Extractor concluído em 0.00s
+2026-07-30 20:08:53,009 | INFO | Segments: 1
+2026-07-30 20:08:53,009 | INFO | ============================================================
+2026-07-30 20:08:53,009 | INFO | Viral Scorer
+2026-07-30 20:08:53,009 | INFO | Viral Scorer concluído em 0.00s
+2026-07-30 20:08:53,009 | INFO | Best Clips: 1
+2026-07-30 20:08:53,010 | INFO | ============================================================
+2026-07-30 20:08:53,010 | INFO | Clip Generator
+2026-07-30 20:08:53,147 | INFO | Clip Generator concluído em 0.14s
+2026-07-30 20:08:53,147 | INFO | ============================================================
+2026-07-30 20:08:53,148 | INFO | Subtitle Generator
+2026-07-30 20:08:53,149 | INFO | Subtitle Generator concluído em 0.00s
+2026-07-30 20:08:53,149 | INFO | 
+2026-07-30 20:08:53,150 | INFO | ===== PIPELINE TERMINADA =====
+2026-07-30 20:08:53,150 | INFO | Tempo total: 23.92s
+2026-07-30 20:08:53,150 | INFO | Clips gerados: 1
