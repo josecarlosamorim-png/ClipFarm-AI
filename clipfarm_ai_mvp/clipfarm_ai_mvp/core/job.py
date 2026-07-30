@@ -21,7 +21,14 @@ class ProcessingJob:
     # Processamento
     scenes: list = field(default_factory=list)
     transcript: list = field(default_factory=list)
-    candidates: list = field(default_factory=list)
+
+    # Segmentos gerados a partir da transcrição
+    segments: list = field(default_factory=list)
+
+    # Clips selecionados pelo algoritmo
+    best_clips: list = field(default_factory=list)
+
+    # Clips exportados
     clips: list = field(default_factory=list)
 
     # Informação extra
