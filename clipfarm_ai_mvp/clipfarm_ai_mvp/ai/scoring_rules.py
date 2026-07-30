@@ -3,54 +3,32 @@ from typing import Tuple
 
 
 class ScoringRules:
-    """
-    Sistema heurístico de pontuação.
-
-    Score máximo: 100
-
-    O objetivo é encontrar segmentos com elevado potencial
-    para TikTok, Reels e Shorts.
-    """
 
     HOOK_WORDS = {
-
-        "imagina",
-        "sabias",
-        "segredo",
-        "erro",
-        "nunca",
-        "atenção",
-        "porque",
-        "como",
-        "verdade",
-        "descobre",
-        "wait",
-        "listen",
-        "warning",
-        "top",
-        "best",
-        "crazy",
-        "insane"
-
+        "imagina", "sabias", "segredo", "erro", "nunca",
+        "atenção", "porque", "como", "verdade",
+        "descobre", "wait", "listen", "warning",
+        "top", "best", "crazy", "insane"
     }
 
     EMOTION_WORDS = {
+        "incrível", "inacreditável", "fantástico",
+        "impossível", "ridículo", "melhor",
+        "pior", "chocante", "assustador",
+        "insano", "surpreendente"
+    }
 
-        "incrível",
-        "inacreditável",
-        "impossível",
-        "fantástico",
-        "chocante",
-        "amedrontador",
-        "ridículo",
-        "perfeito",
-        "melhor",
-        "pior"
-
+    STORY_WORDS = {
+        "um dia",
+        "aconteceu",
+        "de repente",
+        "então",
+        "mas",
+        "até que",
+        "no entanto"
     }
 
     CTA_WORDS = {
-
         "segue",
         "follow",
         "subscribe",
@@ -58,98 +36,176 @@ class ScoringRules:
         "share",
         "comenta",
         "like"
+    }
 
+    CURIOSITY_WORDS = {
+        "ninguém",
+        "segredo",
+        "descobre",
+        "porque",
+        "como",
+        "verdade",
+        "erro",
+        "nunca"
     }
 
     def score(self, segment: dict) -> Tuple[int, list]:
 
-        score = 0
-
         reasons = []
+
+        score = 0
 
         text = segment["text"]
 
-        text_lower = text.lower()
+        lower = text.lower()
 
-        duration = segment["end"] - segment["start"]
-
-        # --------------------------
-        # Duração
-        # --------------------------
-
-        if 20 <= duration <= 40:
-
-            score += 20
-            reasons.append("Boa duração")
-
-        elif 15 <= duration <= 50:
-
-            score += 12
-            reasons.append("Duração aceitável")
-
-        # --------------------------
-        # Número de palavras
-        # --------------------------
+        duration = segment["duration"]
 
         words = text.split()
 
         word_count = len(words)
 
-        if word_count >= 80:
+        # ---------------------------------
+        # Duração
+        # ---------------------------------
 
-            score += 20
-            reasons.append("Muito conteúdo")
+        if 22 <= duration <= 38:
 
-        elif word_count >= 50:
+            score += 18
+
+            reasons.append("Boa duração")
+
+        elif 18 <= duration <= 45:
+
+            score += 12
+
+        # ---------------------------------
+        # Densidade
+        # ---------------------------------
+
+        density = word_count / max(duration, 1)
+
+        if 2 <= density <= 4:
 
             score += 15
-            reasons.append("Boa quantidade de fala")
 
-        elif word_count >= 30:
+            reasons.append("Boa densidade")
+
+        elif density > 4:
 
             score += 8
 
-        # --------------------------
-        # Hook
-        # --------------------------
+        # ---------------------------------
+        # Conteúdo
+        # ---------------------------------
 
-        if any(word in text_lower for word in self.HOOK_WORDS):
+        if word_count >= 90:
 
-            score += 20
+            score += 18
+
+            reasons.append("Muito conteúdo")
+
+        elif word_count >= 60:
+
+            score += 12
+
+        elif word_count < 20:
+
+            score -= 12
+
+            reasons.append("Pouco conteúdo")
+
+        # ---------------------------------
+        # Hooks
+        # ---------------------------------
+
+        hooks = sum(
+
+            word in lower
+
+            for word in self.HOOK_WORDS
+
+        )
+
+        score += min(hooks * 5, 20)
+
+        if hooks:
 
             reasons.append("Hook")
 
-        # --------------------------
+        # ---------------------------------
+        # Curiosidade
+        # ---------------------------------
+
+        curiosity = sum(
+
+            word in lower
+
+            for word in self.CURIOSITY_WORDS
+
+        )
+
+        score += curiosity * 4
+
+        if curiosity:
+
+            reasons.append("Curiosity Gap")
+
+        # ---------------------------------
+        # Storytelling
+        # ---------------------------------
+
+        story = sum(
+
+            word in lower
+
+            for word in self.STORY_WORDS
+
+        )
+
+        score += story * 5
+
+        if story:
+
+            reasons.append("Storytelling")
+
+        # ---------------------------------
         # Emoção
-        # --------------------------
+        # ---------------------------------
 
-        emotion_hits = sum(
+        emotion = sum(
 
-            word in text_lower
+            word in lower
 
             for word in self.EMOTION_WORDS
 
         )
 
-        score += emotion_hits * 5
+        score += emotion * 5
 
-        if emotion_hits:
+        if emotion:
 
-            reasons.append("Palavras emocionais")
+            reasons.append("Emoção")
 
-        # --------------------------
-        # Call To Action
-        # --------------------------
+        # ---------------------------------
+        # CTA
+        # ---------------------------------
 
-        if any(word in text_lower for word in self.CTA_WORDS):
+        if any(
+
+            word in lower
+
+            for word in self.CTA_WORDS
+
+        ):
 
             score += 8
 
-            reasons.append("Call To Action")
+            reasons.append("CTA")
 
-        # --------------------------
+        # ---------------------------------
         # Perguntas
-        # --------------------------
+        # ---------------------------------
 
         questions = text.count("?")
 
@@ -165,9 +221,9 @@ class ScoringRules:
 
             reasons.append("Pergunta")
 
-        # --------------------------
+        # ---------------------------------
         # Exclamações
-        # --------------------------
+        # ---------------------------------
 
         exclamations = text.count("!")
 
@@ -179,55 +235,23 @@ class ScoringRules:
 
         )
 
-        if exclamations:
-
-            reasons.append("Ênfase")
-
-        # --------------------------
+        # ---------------------------------
         # Números
-        # --------------------------
+        # ---------------------------------
 
-        numbers = re.findall(
-
-            r"\d+",
-
-            text
-
-        )
-
-        if numbers:
+        if re.search(r"\d+", text):
 
             score += 5
 
             reasons.append("Números")
 
-        # --------------------------
-        # Frases longas
-        # --------------------------
+        # ---------------------------------
+        # Finalização
+        # ---------------------------------
 
-        average_length = (
+        if score >= 80:
 
-            word_count /
-
-            max(
-
-                text.count("."),
-
-                1
-
-            )
-
-        )
-
-        if average_length > 12:
-
-            score += 5
-
-            reasons.append("Boa densidade")
-
-        # --------------------------
-        # Limites
-        # --------------------------
+            reasons.append("Elevado potencial viral")
 
         score = max(
 

@@ -16,7 +16,6 @@ class OpenAIClient(LLMInterface):
         self.enabled = bool(self.api_key)
 
         if self.enabled:
-
             self.client = OpenAI(
                 api_key=self.api_key
             )
@@ -28,7 +27,6 @@ class OpenAIClient(LLMInterface):
         # -------------------------------
 
         if not self.enabled:
-
             return self._fallback(segment)
 
         try:
@@ -58,65 +56,82 @@ class OpenAIClient(LLMInterface):
             )
 
             result = json.loads(
-
                 response.choices[0].message.content
-
             )
 
             return {
 
                 "score": int(
-
                     result.get(
-
                         "score",
-
                         50
-
                     )
-
                 ),
 
                 "title": result.get(
-
                     "title",
-
                     "Untitled"
+                ),
 
+                "hook": result.get(
+                    "hook",
+                    ""
                 ),
 
                 "category": result.get(
-
                     "category",
-
                     "General"
+                ),
 
+                "subcategory": result.get(
+                    "subcategory",
+                    ""
+                ),
+
+                "emotion": result.get(
+                    "emotion",
+                    ""
+                ),
+
+                "target_audience": result.get(
+                    "target_audience",
+                    ""
+                ),
+
+                "keywords": result.get(
+                    "keywords",
+                    []
+                ),
+
+                "retention_score": int(
+                    result.get(
+                        "retention_score",
+                        50
+                    )
+                ),
+
+                "virality_score": int(
+                    result.get(
+                        "virality_score",
+                        50
+                    )
                 ),
 
                 "confidence": float(
-
                     result.get(
-
                         "confidence",
-
                         0.80
-
                     )
-
                 ),
 
                 "reason": result.get(
-
                     "reason",
-
                     ""
-
                 )
 
             }
 
         except Exception:
-
             return self._fallback(segment)
 
     def _fallback(self, segment):
@@ -151,7 +166,21 @@ class OpenAIClient(LLMInterface):
 
             "title": preview,
 
+            "hook": "",
+
             "category": "Unknown",
+
+            "subcategory": "",
+
+            "emotion": "",
+
+            "target_audience": "",
+
+            "keywords": [],
+
+            "retention_score": score,
+
+            "virality_score": score,
 
             "confidence": 0.60,
 

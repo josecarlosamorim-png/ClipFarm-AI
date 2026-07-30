@@ -3,59 +3,76 @@ from core.job import ProcessingJob
 
 class SegmentExtractor:
 
-    MIN_DURATION = 15
-    MAX_DURATION = 45
+    MIN_DURATION = 20
+    TARGET_DURATION = 30
+    MAX_DURATION = 40
 
-    HOOKS = {
-
-        "imagine",
+    HOOK_WORDS = {
         "imagina",
+        "imagine",
         "sabias",
-        "nunca",
-        "porque",
-        "erro",
         "segredo",
+        "erro",
         "atenção",
-        "listen",
+        "espera",
         "wait",
+        "listen",
+        "porque",
+        "como",
+        "why",
+        "how",
         "top",
-        "best"
-
+        "best",
+        "viral",
+        "nunca"
     }
 
-    def process(self, job: ProcessingJob):
+    END_MARKERS = {
+        ".",
+        "!",
+        "?"
+    }
+
+    def extract(self, job: ProcessingJob):
 
         transcript = job.transcript
+        scenes = job.scenes
+
+        if not transcript:
+            job.segments = []
+            return
 
         segments = []
 
         current = []
-
         start = None
 
         for sentence in transcript:
 
             if start is None:
-
                 start = sentence["start"]
 
             current.append(sentence)
 
             duration = sentence["end"] - start
 
-            score = self._segment_score(current)
+            score = self._segment_score(
+                current,
+                scenes
+            )
 
-            should_close = False
+            close = False
 
             if duration >= self.MAX_DURATION:
 
-                should_close = True
+                close = True
 
-            elif duration >= self.MIN_DURATION and score >= 40:
+            elif duration >= self.MIN_DURATION:
 
-                should_close = True
+                if score >= 45:
+                    close = True
 
-            if should_close:
+            if close:
 
                 segments.append(
 
@@ -64,58 +81,131 @@ class SegmentExtractor:
                 )
 
                 current = []
-
                 start = None
 
         if current:
 
-            segments.append(
+            if segments:
 
-                self._build_segment(current)
+                last = self._build_segment(current)
 
-            )
+                if last["duration"] < 10:
+
+                    previous = segments.pop()
+
+                    merged = previous["sentences"] + last["sentences"]
+
+                    segments.append(
+
+                        self._build_segment(merged)
+
+                    )
+
+                else:
+
+                    segments.append(last)
+
+            else:
+
+                segments.append(
+
+                    self._build_segment(current)
+
+                )
 
         job.segments = segments
 
-    # ---------------------------------------
+    # ---------------------------------------------------
 
-    def _segment_score(self, current):
+    def _segment_score(self, sentences, scenes):
 
         score = 0
 
         text = " ".join(
-
             s["text"]
-
-            for s in current
-
+            for s in sentences
         ).lower()
 
-        if any(
+        start = sentences[0]["start"]
+        end = sentences[-1]["end"]
 
-            h in text
+        duration = end - start
 
-            for h in self.HOOKS
+        # ------------------------
+        # Duração ideal
+        # ------------------------
 
-        ):
-
+        if 25 <= duration <= 35:
             score += 20
 
-        score += text.count("?") * 5
+        elif 20 <= duration <= 40:
+            score += 15
 
-        score += text.count("!") * 3
+        # ------------------------
+        # Densidade
+        # ------------------------
 
-        score += min(
+        words = len(text.split())
 
-            len(text.split()) // 10,
+        score += min(words // 8, 20)
 
-            20
+        # ------------------------
+        # Hooks
+        # ------------------------
+
+        hooks = sum(
+
+            word in text
+
+            for word in self.HOOK_WORDS
 
         )
 
+        score += hooks * 8
+
+        # ------------------------
+        # Perguntas
+        # ------------------------
+
+        score += min(
+            text.count("?") * 5,
+            15
+        )
+
+        # ------------------------
+        # Exclamações
+        # ------------------------
+
+        score += min(
+            text.count("!") * 3,
+            9
+        )
+
+        # ------------------------
+        # Mudança de cena
+        # ------------------------
+
+        for scene in scenes:
+
+            if start <= scene <= end:
+
+                score += 8
+
+                break
+
+        # ------------------------
+        # Final de frase
+        # ------------------------
+
+        if text.strip():
+
+            if text.strip()[-1] in self.END_MARKERS:
+
+                score += 10
+
         return score
 
-    # ---------------------------------------
+    # ---------------------------------------------------
 
     def _build_segment(self, sentences):
 
@@ -127,13 +217,16 @@ class SegmentExtractor:
 
         )
 
+        start = sentences[0]["start"]
+        end = sentences[-1]["end"]
+
         return {
 
-            "start": sentences[0]["start"],
+            "start": start,
 
-            "end": sentences[-1]["end"],
+            "end": end,
 
-            "duration": sentences[-1]["end"] - sentences[0]["start"],
+            "duration": end - start,
 
             "text": text,
 
