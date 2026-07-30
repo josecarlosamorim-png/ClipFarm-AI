@@ -1,0 +1,3 @@
+OPENAI_MODEL='gpt-5.5'
+MAX_CLIPS=10
+OUTPUT='output'

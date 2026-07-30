@@ -1,0 +1,11 @@
+streamlit
+opencv-python
+openai
+faster-whisper
+ultralytics
+easyocr
+ffmpeg-python
+pandas
+numpy
+sqlalchemy
+pyyaml
