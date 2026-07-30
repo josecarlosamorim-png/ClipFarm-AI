@@ -47,7 +47,11 @@ class ClipGenerator:
 
                     "title": clip["title"],
 
-                    "duration": clip["end"] - clip["start"]
+                    "duration": clip["end"] - clip["start"],
+
+                    "start": clip["start"],
+
+                    "end": clip["end"]
 
                 })
 
