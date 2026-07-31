@@ -1,85 +1,63 @@
-from ai.decision.models import DecisionResult
-from ai.decision.weights import (
-    VIRAL_WEIGHT,
-    CAMPAIGN_WEIGHT,
-    RETENTION_WEIGHT,
-    VISION_WEIGHT,
-    AUDIO_WEIGHT,
-)
+from ai.decision.features.extractor import FeatureExtractor
+
+from ai.decision.strategies.default import DefaultStrategy
+from ai.decision.strategies.moonpay import MoonPayStrategy
+from ai.decision.strategies.redbull import RedBullStrategy
+from ai.decision.strategies.spotify import SpotifyStrategy
 
 
 class DecisionEngine:
 
+    def __init__(self):
+
+        self.extractor = FeatureExtractor()
+
+        self.strategies = {
+
+            "default": DefaultStrategy(),
+
+            "moonpay": MoonPayStrategy(),
+
+            "redbull": RedBullStrategy(),
+
+            "spotify": SpotifyStrategy(),
+
+        }
+
     def evaluate(
         self,
         clip,
-        campaign_result=None,
-    ) -> DecisionResult:
+        campaign=None,
+    ):
 
-        result = DecisionResult()
+        strategy = self._get_strategy(campaign)
 
-        # ------------------------
-        # Viralidade
-        # ------------------------
-
-        result.viral_score = clip.score
-
-        # ------------------------
-        # Retenção
-        # ------------------------
-
-        result.retention_score = clip.retention_score
-
-        # ------------------------
-        # Vision
-        # ------------------------
-
-        if clip.analysis:
-
-            result.vision_score = clip.analysis.campaign_score
-
-            result.audio_score = clip.analysis.audio_score
-
-        # ------------------------
-        # Campanha
-        # ------------------------
-
-        if campaign_result:
-
-            result.campaign_score = campaign_result.score
-
-            result.passed_campaign = campaign_result.passed
-
-            result.reasons.extend(
-                campaign_result.reasons
-            )
-
-        else:
-
-            result.campaign_score = 50
-
-        # ------------------------
-        # Score Final
-        # ------------------------
-
-        result.final_score = (
-
-            result.viral_score * VIRAL_WEIGHT +
-
-            result.campaign_score * CAMPAIGN_WEIGHT +
-
-            result.retention_score * RETENTION_WEIGHT +
-
-            result.vision_score * VISION_WEIGHT +
-
-            result.audio_score * AUDIO_WEIGHT
-
+        features = self.extractor.extract(
+            clip,
         )
 
-        # ------------------------
-        # Confiança
-        # ------------------------
+        decision = strategy.evaluate(
+            features,
+            clip,
+            campaign,
+        )
 
-        result.confidence = clip.confidence
+        clip.decision = decision
 
-        return result
+        return decision
+
+    def _get_strategy(
+        self,
+        campaign,
+    ):
+
+        if campaign is None:
+
+            return self.strategies["default"]
+
+        name = campaign.name.lower()
+
+        return self.strategies.get(
+            name,
+            self.strategies["default"],
+        )

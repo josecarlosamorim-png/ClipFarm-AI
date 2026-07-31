@@ -1,0 +1,1 @@
+result.strategy = "redbull"

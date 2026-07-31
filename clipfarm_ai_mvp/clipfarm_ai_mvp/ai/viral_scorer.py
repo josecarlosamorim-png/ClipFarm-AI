@@ -5,7 +5,9 @@ from ai.openai_client import OpenAIClient
 from ai.hook_detector import HookDetector
 from ai.analysis.clip.analyzer import ClipAnalyzer
 from core.converters.segment_converter import SegmentConverter
+
 from ai.campaign.validator.validator import CampaignValidator
+from ai.decision.engine import DecisionEngine
 
 
 class ViralScorer:
@@ -17,8 +19,12 @@ class ViralScorer:
         self.rules = ScoringRules()
         self.llm = OpenAIClient()
         self.hook = HookDetector()
+
         self.converter = SegmentConverter()
+
         self.campaign_validator = CampaignValidator()
+
+        self.decision_engine = DecisionEngine()
 
         self.clip_analyzer = ClipAnalyzer()
 
@@ -28,7 +34,12 @@ class ViralScorer:
 
         for segment in job.segments:
 
+            # --------------------------------------------------
+            # Análise do Clip
+            # --------------------------------------------------
+
             analysis = self.clip_analyzer.analyze(segment)
+
             heuristic_score, reasons = self.rules.score(segment)
 
             hook_score = self.hook.score(
@@ -37,91 +48,35 @@ class ViralScorer:
 
             llm = self.llm.analyze_segment(segment)
 
-            llm_score = llm.get("score", 50)
+            llm_score = llm.get(
+                "score",
+                50,
+            )
 
             retention = llm.get(
                 "retention_score",
-                llm_score
+                llm_score,
             )
 
             virality = llm.get(
                 "virality_score",
-                llm_score
+                llm_score,
             )
 
             confidence = llm.get(
                 "confidence",
-                0.6
+                0.6,
             )
 
-            # ------------------------
-            # Bónus de emoção
-            # ------------------------
-
-            emotion_bonus = 0
-
-            if llm.get("emotion"):
-                emotion_bonus = 5
-
-            # ------------------------
-            # Bónus de keywords
-            # ------------------------
-
-            keyword_bonus = min(
-                len(llm.get("keywords", [])),
-                5
-            )
-
-            # ------------------------
-            # Fórmula principal
-            # ------------------------
-
-            final_score = (
-
-                heuristic_score * 0.35 +
-
-                hook_score * 0.20 +
-
-                llm_score * 0.20 +
-
-                retention * 0.15 +
-
-                virality * 0.10 +
-
-                emotion_bonus +
-
-                keyword_bonus
-
-            )
-
-            # ------------------------
-            # Ajuste pela confiança
-            # ------------------------
-
-            final_score *= (
-                0.75 +
-                confidence * 0.25
-            )
-
-            final_score = int(
-                max(
-                    0,
-                    min(
-                        final_score,
-                        100
-                    )
-                )
-            )
-
-            # ------------------------
-            # Criar dicionário do clip
-            # ------------------------
+            # --------------------------------------------------
+            # Criar objeto Clip
+            # --------------------------------------------------
 
             clip = {
 
                 **segment,
 
-                "score": final_score,
+                "score": 0,
 
                 "heuristic_score": heuristic_score,
 
@@ -143,54 +98,86 @@ class ViralScorer:
 
                 "emotion": llm.get("emotion"),
 
-                "target_audience": llm.get("target_audience"),
+                "target_audience": llm.get(
+                    "target_audience"
+                ),
 
-                "keywords": llm.get("keywords", []),
+                "keywords": llm.get(
+                    "keywords",
+                    [],
+                ),
 
                 "confidence": confidence,
 
                 "reason": llm.get("reason"),
 
-                "heuristic_reasons": reasons
+                "heuristic_reasons": reasons,
 
             }
-
-            # ------------------------
-            # Converter para objeto Clip
-            # ------------------------
 
             clip_obj = self.converter.convert(clip)
 
             clip_obj.analysis = analysis
+
+            # --------------------------------------------------
+            # Validação da campanha
+            # --------------------------------------------------
+
             if hasattr(job, "campaign") and job.campaign:
 
-              clip_obj.campaign = self.campaign_validator.validate(
-                  job.campaign,
-                  clip_obj,
-              )
- 
+                clip_obj.campaign = (
+
+                    self.campaign_validator.validate(
+
+                        job.campaign,
+
+                        clip_obj,
+
+                    )
+
+                )
+
+            # --------------------------------------------------
+            # Decision Engine V2
+            # --------------------------------------------------
+
+            campaign = getattr(job, "campaign", None)
+
+            clip_obj.decision = self.decision_engine.evaluate(
+                clip_obj,
+                campaign,
+            )
+
+            clip_obj.score = clip_obj.decision.final_score
             scored.append(clip_obj)
 
-        # ------------------------
-        # Ordenar clips
-        # ------------------------
+        # --------------------------------------------------
+        # Ordenação
+        # --------------------------------------------------
 
         scored.sort(
 
             key=lambda c: (
-                c.score,
+
+                c.decision.final_score,
+
+                c.decision.campaign_score,
+
                 c.retention_score,
+
                 c.virality_score,
+
                 c.confidence,
+
             ),
 
-            reverse=True
+            reverse=True,
 
         )
 
-        # ------------------------
+        # --------------------------------------------------
         # Remover duplicados
-        # ------------------------
+        # --------------------------------------------------
 
         filtered = []
 
@@ -201,19 +188,29 @@ class ViralScorer:
             for chosen in filtered:
 
                 overlap = min(
+
                     clip.end,
-                    chosen.end
+
+                    chosen.end,
+
                 ) - max(
+
                     clip.start,
-                    chosen.start
+
+                    chosen.start,
+
                 )
 
                 if overlap <= 0:
+
                     continue
 
                 shortest = min(
+
                     clip.duration,
-                    chosen.duration
+
+                    chosen.duration,
+
                 )
 
                 if shortest > 0:
@@ -221,9 +218,11 @@ class ViralScorer:
                     if overlap / shortest > 0.70:
 
                         duplicate = True
+
                         break
 
             if not duplicate:
+
                 filtered.append(clip)
 
         job.best_clips = filtered[:self.TOP_CLIPS]
