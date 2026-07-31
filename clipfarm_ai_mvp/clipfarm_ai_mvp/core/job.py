@@ -16,7 +16,10 @@ class ProcessingJob:
     # Entrada
     # =====================================================
 
-    video_path: Path | None = None
+    video_path: Path |None = None
+
+    # Campanha atualmente selecionada
+    campaign: Any | None = None
 
     # =====================================================
     # Estado do processamento

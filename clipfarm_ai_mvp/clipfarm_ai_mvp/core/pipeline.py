@@ -57,7 +57,7 @@ class Pipeline:
             logger.info(
                 "%s concluído em %.2fs",
                 name,
-                elapsed
+                elapsed,
             )
 
             job.add_log(
@@ -74,13 +74,14 @@ class Pipeline:
 
             raise
 
-    def run(self, video: Path):
-
-        job = ProcessingJob(video_path=video)
+    def run(
+        self,
+        job: ProcessingJob,
+    ):
 
         logger.info("")
         logger.info("========== NOVO PROCESSAMENTO ==========")
-        logger.info(video)
+        logger.info(job.video_path)
 
         self._execute_step(
             job,
@@ -98,7 +99,7 @@ class Pipeline:
 
         logger.info(
             "Scenes: %d",
-            len(job.scenes)
+            len(job.scenes),
         )
 
         self._execute_step(
@@ -117,7 +118,7 @@ class Pipeline:
 
         logger.info(
             "Transcript: %d",
-            len(job.transcript)
+            len(job.transcript),
         )
 
         self._execute_step(
@@ -129,7 +130,7 @@ class Pipeline:
 
         logger.info(
             "Segments: %d",
-            len(job.segments)
+            len(job.segments),
         )
 
         self._execute_step(
@@ -141,7 +142,7 @@ class Pipeline:
 
         logger.info(
             "Best Clips: %d",
-            len(job.best_clips)
+            len(job.best_clips),
         )
 
         self._execute_step(
@@ -162,7 +163,13 @@ class Pipeline:
 
         logger.info("")
         logger.info("===== PIPELINE TERMINADA =====")
-        logger.info("Tempo total: %.2fs", job.elapsed_time)
-        logger.info("Clips gerados: %d", len(job.generated_clips))
+        logger.info(
+            "Tempo total: %.2fs",
+            job.elapsed_time,
+        )
+        logger.info(
+            "Clips gerados: %d",
+            len(job.generated_clips),
+        )
 
         return job

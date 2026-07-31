@@ -1,39 +1,26 @@
 {
     "name": "MoonPay",
-
     "platforms": [
-
-        "TikTok",
-
+        "YouTube Shorts",
         "Instagram",
-
-        "YouTube Shorts"
-
+        "TikTok"
     ],
-
     "requires_logo": true,
-
     "logo_first_seconds": 10,
-
     "preferred": [
-
-        "wins",
-
         "big tricks",
-
-        "happy moments"
-
+        "happy moments",
+        "high scores"
     ],
-
     "forbidden": [
-
         "falls",
-
         "injuries",
-
         "betting",
-
-        "trading"
-
-    ]
+        "trading",
+        "odds",
+        "crashes"
+    ],
+    "required_keywords": [],
+    "forbidden_keywords": [],
+    "source_urls": []
 }

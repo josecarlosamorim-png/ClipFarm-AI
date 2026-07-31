@@ -3,6 +3,9 @@ from core.job import ProcessingJob
 from ai.scoring_rules import ScoringRules
 from ai.openai_client import OpenAIClient
 from ai.hook_detector import HookDetector
+from ai.analysis.clip.analyzer import ClipAnalyzer
+from core.converters.segment_converter import SegmentConverter
+from ai.campaign.validator.validator import CampaignValidator
 
 
 class ViralScorer:
@@ -14,6 +17,10 @@ class ViralScorer:
         self.rules = ScoringRules()
         self.llm = OpenAIClient()
         self.hook = HookDetector()
+        self.converter = SegmentConverter()
+        self.campaign_validator = CampaignValidator()
+
+        self.clip_analyzer = ClipAnalyzer()
 
     def score(self, job: ProcessingJob):
 
@@ -21,10 +28,11 @@ class ViralScorer:
 
         for segment in job.segments:
 
+            analysis = self.clip_analyzer.analyze(segment)
             heuristic_score, reasons = self.rules.score(segment)
 
             hook_score = self.hook.score(
-                segment["text"][:250]
+                analysis.transcript[:250]
             )
 
             llm = self.llm.analyze_segment(segment)
@@ -53,7 +61,6 @@ class ViralScorer:
             emotion_bonus = 0
 
             if llm.get("emotion"):
-
                 emotion_bonus = 5
 
             # ------------------------
@@ -61,11 +68,8 @@ class ViralScorer:
             # ------------------------
 
             keyword_bonus = min(
-
                 len(llm.get("keywords", [])),
-
                 5
-
             )
 
             # ------------------------
@@ -95,30 +99,23 @@ class ViralScorer:
             # ------------------------
 
             final_score *= (
-
                 0.75 +
-
                 confidence * 0.25
-
             )
 
             final_score = int(
-
                 max(
-
                     0,
-
                     min(
-
                         final_score,
-
                         100
-
                     )
-
                 )
-
             )
+
+            # ------------------------
+            # Criar dicionário do clip
+            # ------------------------
 
             clip = {
 
@@ -158,25 +155,42 @@ class ViralScorer:
 
             }
 
-            scored.append(clip)
+            # ------------------------
+            # Converter para objeto Clip
+            # ------------------------
+
+            clip_obj = self.converter.convert(clip)
+
+            clip_obj.analysis = analysis
+            if hasattr(job, "campaign") and job.campaign:
+
+              clip_obj.campaign = self.campaign_validator.validate(
+                  job.campaign,
+                  clip_obj,
+              )
+ 
+            scored.append(clip_obj)
+
+        # ------------------------
+        # Ordenar clips
+        # ------------------------
 
         scored.sort(
 
             key=lambda c: (
-
-                c["score"],
-
-                c["retention_score"],
-
-                c["virality_score"],
-
-                c["confidence"]
-
+                c.score,
+                c.retention_score,
+                c.virality_score,
+                c.confidence,
             ),
 
             reverse=True
 
         )
+
+        # ------------------------
+        # Remover duplicados
+        # ------------------------
 
         filtered = []
 
@@ -187,28 +201,19 @@ class ViralScorer:
             for chosen in filtered:
 
                 overlap = min(
-
-                    clip["end"],
-
-                    chosen["end"]
-
+                    clip.end,
+                    chosen.end
                 ) - max(
-
-                    clip["start"],
-
-                    chosen["start"]
-
+                    clip.start,
+                    chosen.start
                 )
 
                 if overlap <= 0:
                     continue
 
                 shortest = min(
-
-                    clip["duration"],
-
-                    chosen["duration"]
-
+                    clip.duration,
+                    chosen.duration
                 )
 
                 if shortest > 0:
@@ -219,7 +224,6 @@ class ViralScorer:
                         break
 
             if not duplicate:
-
                 filtered.append(clip)
 
         job.best_clips = filtered[:self.TOP_CLIPS]
