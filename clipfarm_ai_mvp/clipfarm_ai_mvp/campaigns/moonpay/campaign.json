@@ -1,0 +1,39 @@
+{
+    "name": "MoonPay",
+
+    "platforms": [
+
+        "TikTok",
+
+        "Instagram",
+
+        "YouTube Shorts"
+
+    ],
+
+    "requires_logo": true,
+
+    "logo_first_seconds": 10,
+
+    "preferred": [
+
+        "wins",
+
+        "big tricks",
+
+        "happy moments"
+
+    ],
+
+    "forbidden": [
+
+        "falls",
+
+        "injuries",
+
+        "betting",
+
+        "trading"
+
+    ]
+}
